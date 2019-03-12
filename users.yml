@@ -1,0 +1,26 @@
+---
+- hosts: "localhost"
+  connection: "local"
+  vars_prompt:
+  - name: "users"
+    prompt: "Please enter username to be created"
+  tasks:
+  - name: "Create user accounts"
+    user:
+      name: "{{ item }}"
+      groups: "admin,www-data"
+    with_items: "{{ users }}"
+  - name: "Allow admin users to sudo without a password"
+    lineinfile:
+      dest: "/etc/sudoers" # path: in version 2.3
+      state: "present"
+      regexp: "^%admin"
+      line: "%admin ALL=(ALL) NOPASSWD: ALL"
+  - name: Generate /etc/ssh/ RSA host key
+    command : ssh-keygen -q -t rsa -f /etc/ssh/{{ users }}.key.pub -C "" -N ""
+  - name: "Add authorized keys"
+    authorized_key:
+      user: "{{ item }}"
+      key: "{{ lookup('file', '/etc/ssh/'+ item + '.key.pub') }}"
+    with_items: "{{ users }}"
+...
